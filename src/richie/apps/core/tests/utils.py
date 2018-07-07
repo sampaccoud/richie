@@ -5,6 +5,58 @@ import io
 import os
 import random
 
+from cms.test_utils.testcases import CMSTestCase
+
+
+class CMSPluginTestCase(CMSTestCase):
+    """
+    Enriched CMS test case object to include useful stuff about plugin
+    rendering.
+
+    Note:
+        CMSTestCase mixin from DjangoCMS cause unknow issue with transactions
+        on some tests and lead to necessity to decorate involved tests with
+        ``django.db.transaction`` (or to use it as a context manager) which is
+        undesired.
+
+        We should change this mixin to not inherit anymore from CMSTestCase
+        and try to build ourself a correct context.
+    """
+
+    def get_practical_plugin_context(self, extra_context=None):
+        """
+        Build a template context with dummy request object and
+        instanciated content renderer suitable to perform full rendering of
+        any plugin.
+
+        Note:
+            CMSTestCase use a dummy AnonymousUser on default behavior, you can
+            override it with a custom user as an ``user`` attribute on your
+            test case object. In most cases we should in fact define this
+            attribute during test to use a UserFactory instead of a global
+            user for every tests.
+
+        Keyword Arguments:
+            extra_context (dict): Dictionnary to add extra variable to context.
+                Default to an empty dict.
+
+        Returns:
+            django.template.Context: Template context filled with request
+            object as ``request`` item and content renderer as
+            ``cms_content_renderer`` item.
+        """
+        context = self.get_context()
+        if extra_context:
+            context.update(extra_context)
+
+        renderer = self.get_content_renderer(request=context["request"])
+
+        # 'cms_content_renderer' is the attempted item name from CMS rendering
+        # machinery
+        context["cms_content_renderer"] = renderer
+
+        return context
+
 
 def file_getter(basedir, image_type):
     """

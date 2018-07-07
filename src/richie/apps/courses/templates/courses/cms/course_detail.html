@@ -1,7 +1,7 @@
 {% extends "richie/fullwidth.html" %}
 {% load cms_tags i18n %}
 
-{% block content %}
+{% block content %}{% spaceless %}
 <div class="course-detail">
   <h1 class="course-detail__title">{{ current_page.get_title }}</h1>
 
@@ -88,7 +88,6 @@
             {% include "courses/cms/organization_fragment.html" with organization=course.organization_main is_main=True %}
           {% endif %}
           {% for organization in course.organizations.drafts %}
-            {# If the current page is a draft, show draft organizations with a class annotation for styling #}
             {% if organization.id != course.organization_main.id %}
               {% include "courses/cms/organization_fragment.html" %}
             {% endif %}
@@ -128,4 +127,4 @@
   {% endwith %}
 
 </div>
-{% endblock content %}
+{% endspaceless %}{% endblock content %}

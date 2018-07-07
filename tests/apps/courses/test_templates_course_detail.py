@@ -14,6 +14,10 @@ from richie.apps.courses.factories import (
 class CourseCMSTestCase(CMSTestCase):
     """
     End-to-end test suite to validate the content and Ux of the course detail view
+
+    It's worth to notice related draft items (Person, Organization) are only
+    displayed on a draft course page so admin can preview them. But draft items are
+    hidden from published page so common users can not see them.
     """
 
     def test_course_cms_published_content(self):
@@ -53,23 +57,19 @@ class CourseCMSTestCase(CMSTestCase):
         # Publish and ensure content is correct
         page.publish("en")
         response = self.client.get(url)
-        self.assertContains(
-            response,
-            "<title>Very interesting course</title>",
-            status_code=200,
-            html=True,
+        html = str(response.content, encoding="utf8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertInHTML("<title>Very interesting course</title>", html)
+        self.assertInHTML(
+            '<h1 class="course-detail__title">Very interesting course</h1>', html
         )
-        self.assertContains(
-            response,
-            '<h1 class="course-detail__title">Very interesting course</h1>',
-            html=True,
-        )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<div class="course-detail__aside__active-session">{:s}</div>'.format(
                 course.active_session
             ),
-            html=True,
+            html,
         )
 
         # Only published subjects should be present on the page
@@ -93,17 +93,20 @@ class CourseCMSTestCase(CMSTestCase):
             ),
             html=True,
         )
-        # organization 2 is the only "common" org in listing since
-        self.assertContains(
-            response,
+
+        # organization 2 is the only "common" org in listing
+        self.assertInHTML(
             '<li class="course-detail__content__organizations__item">{:s}</li>'.format(
                 organizations[1].extended_object.get_title()
             ),
-            html=True,
+            html,
         )
+
         # Draft organization should not be in response content
         for organization in organizations[-2:]:
-            self.assertNotContains(response, organization.extended_object.get_title())
+            self.assertNotContains(
+                response, organization.extended_object.get_title(), html=True
+            )
 
     def test_course_cms_draft_content(self):
         """
@@ -141,23 +144,19 @@ class CourseCMSTestCase(CMSTestCase):
         # The page should be visible as draft to the staff user
         url = page.get_absolute_url()
         response = self.client.get(url)
-        self.assertContains(
-            response,
-            "<title>Very interesting course</title>",
-            status_code=200,
-            html=True,
+        html = str(response.content, encoding="utf8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertInHTML("<title>Very interesting course</title>", html)
+        self.assertInHTML(
+            '<h1 class="course-detail__title">Very interesting course</h1>', html
         )
-        self.assertContains(
-            response,
-            '<h1 class="course-detail__title">Very interesting course</h1>',
-            html=True,
-        )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<div class="course-detail__aside__active-session">{:s}</div>'.format(
                 course.active_session
             ),
-            html=True,
+            html,
         )
 
         # organization 1 is marked as main and not duplicated
@@ -258,14 +257,13 @@ class CourseCMSTestCase(CMSTestCase):
         page.publish("en")
         url = page.get_absolute_url()
         response = self.client.get(url)
-        self.assertContains(
-            response, "<title>Inactive course</title>", status_code=200, html=True
-        )
-        self.assertContains(
-            response, '<h1 class="course-detail__title">Inactive course</h1>', html=True
-        )
-        self.assertContains(
-            response,
+        html = str(response.content, encoding="utf8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertInHTML("<title>Inactive course</title>", html)
+        self.assertInHTML('<h1 class="course-detail__title">Inactive course</h1>', html)
+        self.assertInHTML(
             '<div class="course-detail__aside__active-session">No active session</div>',
-            html=True,
+            html,
         )
