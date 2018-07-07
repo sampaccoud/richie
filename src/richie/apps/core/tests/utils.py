@@ -5,6 +5,47 @@ import io
 import os
 import random
 
+from cms.test_utils.testcases import CMSTestCase
+
+
+class CMSPluginTestCase(CMSTestCase):
+    """
+    Enriched CMS test case object to include useful stuff about plugin
+    rendering.
+    """
+
+    def get_practical_plugin_context(self, extra_context=None):
+        """
+        Build a template context with dummy request object and
+        instanciated content renderer suitable to perform full rendering of
+        any plugin.
+
+        Note:
+            CMSTestCase use a dummy AnonymousUser on default behavior you may
+            override with a custom user if you an ``user`` attribute to your
+            test case object.
+
+        Keyword Arguments:
+            extra_context (dict): Dictionnary to add extra variable to context.
+                Default to an empty dict.
+
+        Returns:
+            django.template.Context: Template context filled with request
+            object as ``request`` item and content renderer as
+            ``cms_content_renderer`` item.
+        """
+        context = self.get_context()
+        if extra_context:
+            context.update(extra_context)
+
+        renderer = self.get_content_renderer(request=context["request"])
+
+        # 'cms_content_renderer' is the attempted item name from CMS rendering
+        # machinary
+        context["cms_content_renderer"] = renderer
+
+        return context
+
 
 def file_getter(basedir, image_type):
     """

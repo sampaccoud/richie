@@ -14,6 +14,10 @@ from richie.apps.courses.factories import (
 class CourseCMSTestCase(TestCase):
     """
     End-to-end test suite to validate the content and Ux of the course detail view
+
+    It's worth to notice related draft items (Person, Organization) are only
+    displayed for draft page so admin can preview them. But draft items are
+    hided from published page so common users can not see them.
     """
 
     def test_course_cms_published_content(self):
@@ -41,62 +45,66 @@ class CourseCMSTestCase(TestCase):
         # The page should not be visible before it is published
         url = page.get_absolute_url()
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 404)
 
         # Publish and ensure content is correct
         page.publish("en")
         response = self.client.get(url)
-        self.assertContains(
-            response,
+        html = str(response.content, encoding="utf8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertInHTML(
             "<title>Very interesting course</title>",
-            status_code=200,
-            html=True,
+            html,
         )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<h1 class="course-detail__title">Very interesting course</h1>',
-            html=True,
+            html,
         )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<div class="course-detail__aside__active-session">{:s}</div>'.format(
                 course.active_session
             ),
-            html=True,
+            html,
         )
 
         # Only published subjects should be present on the page
         for subject in [subject1, subject2]:
-            self.assertContains(
-                response,
+            self.assertInHTML(
                 '<li class="course-detail__content__subjects__item">{:s}</li>'.format(
                     subject.extended_object.get_title()
                 ),
-                html=True,
+                html,
             )
-        self.assertNotContains(response, subject3.extended_object.get_title())
+        self.assertNotContains(
+            response,
+            subject3.extended_object.get_title(),
+            html=True,
+        )
 
         # organization1 is marked as main organization
-        self.assertContains(
-            response,
+        self.assertInHTML(
             ('<li class="course-detail__content__organizations__item '
              'course-detail__content__organizations__item--main">{:s}</li>').format(
                 organization1.extended_object.get_title()
             ),
-            html=True,
+            html,
         )
-        # organization 2 is the only "common" org in listing since
-        self.assertContains(
-            response,
+
+        # organization 2 is the only "common" org in listing
+        self.assertInHTML(
             '<li class="course-detail__content__organizations__item">{:s}</li>'.format(
                 organization2.extended_object.get_title()
             ),
+            html,
+        )
+
+        # Draft organization should not be in response content
+        self.assertNotContains(
+            response,
+            organization3.extended_object.get_title(),
             html=True,
         )
-        # Draft organization should not be in response content
-        # TODO: This is wrong, we show draft but marked with a class modifier,
-        # this may work because of unused html attribute ?
-        self.assertNotContains(response, organization3.extended_object.get_title())
 
     def test_course_cms_draft_content(self):
         """
@@ -118,34 +126,42 @@ class CourseCMSTestCase(TestCase):
         )
         page = course.extended_object
 
-        # Publish only 2 out of 3 subjects and 2 out of 3 organizations
+        # Publish only 2 out of 3 subjects and a single organization, main
+        # organization stay as a draft
         subject1.extended_object.publish("en")
         subject2.extended_object.publish("en")
-        organization1.extended_object.publish("en")
         organization2.extended_object.publish("en")
 
         # The page should be visible as draft to the staff user
         url = page.get_absolute_url()
         response = self.client.get(url)
-        self.assertContains(
-            response,
+        html = str(response.content, encoding="utf8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertInHTML(
             "<title>Very interesting course</title>",
-            status_code=200,
-            html=True,
+            html,
         )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<h1 class="course-detail__title">Very interesting course</h1>',
-            html=True,
+            html,
         )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<div class="course-detail__aside__active-session">{:s}</div>'.format(
                 course.active_session
             ),
-            html=True,
+            html,
         )
 
+        # organization1 is marked as a main organization and a draft
+        self.assertInHTML(
+            ('<li class="course-detail__content__organizations__item--draft '
+             'course-detail__content__organizations__item--main">{:s}</li>').format(
+                organization1.extended_object.get_title()
+            ),
+            html,
+        )
         # organization2 is not marked as a draft since it has been published
         self.assertNotContains(
             response,
@@ -154,29 +170,26 @@ class CourseCMSTestCase(TestCase):
             ),
         )
         # Draft organization should be present on the page with an annotation for styling
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<li class="course-detail__content__organizations__item--draft">{:s}</li>'.format(
                 organization3.extended_object.get_title()
             ),
-            html=True,
+            html,
         )
 
         # Draft subjects should be present on the page with an annotation for styling
         for subject in [subject1, subject2]:
-            self.assertContains(
-                response,
+            self.assertInHTML(
                 '<li class="course-detail__content__subjects__item">{:s}</li>'.format(
                     subject.extended_object.get_title()
                 ),
-                html=True,
+                html,
             )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<li class="course-detail__content__subjects__item--draft">{:s}</li>'.format(
                 subject3.extended_object.get_title()
             ),
-            html=True,
+            html,
         )
 
     def test_course_cms_published_no_active_sesssion(self):
@@ -190,14 +203,19 @@ class CourseCMSTestCase(TestCase):
         page.publish("en")
         url = page.get_absolute_url()
         response = self.client.get(url)
-        self.assertContains(
-            response, "<title>Inactive course</title>", status_code=200, html=True
+        html = str(response.content, encoding="utf8")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertInHTML(
+            "<title>Inactive course</title>",
+            html,
         )
-        self.assertContains(
-            response, '<h1 class="course-detail__title">Inactive course</h1>', html=True
+        self.assertInHTML(
+            '<h1 class="course-detail__title">Inactive course</h1>',
+            html,
         )
-        self.assertContains(
-            response,
+        self.assertInHTML(
             '<div class="course-detail__aside__active-session">No active session</div>',
-            html=True,
+            html,
         )

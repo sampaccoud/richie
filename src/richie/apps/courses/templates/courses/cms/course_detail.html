@@ -1,7 +1,7 @@
 {% extends "richie/fullwidth.html" %}
 {% load cms_tags i18n %}
 
-{% block content %}
+{% block content %}{% spaceless %}
 <div class="course-detail">
   <h1 class="course-detail__title">{{ current_page.get_title }}</h1>
 
@@ -85,29 +85,11 @@
         <h2>{% trans 'Organizations' %}</h2>
         <ul class="course-detail__content__organizations__list">
           {% if course.organization_main %}
-          <li class="course-detail__content__organizations__item course-detail__content__organizations__item--main">
-            {{ course.organization_main.extended_object.get_title }}
-          </li>
+            {% include "courses/cms/_organization_list-item_snippet.html" with organization=course.organization_main is_main=True %}
           {% endif %}
           {% for organization in course.organizations.drafts %}
-            {# If the current page is a draft, show draft organizations with a class annotation for styling #}
             {% if organization.id != course.organization_main.id %}
-              {% if current_page.publisher_is_draft %}
-                {% if organization.public_extension %}
-                  <li class="course-detail__content__organizations__item">
-                    {{ organization.public_extension.extended_object.get_title }}
-                  </li>
-                {% else %}
-                  <li class="course-detail__content__organizations__item--draft">
-                    {{ organization.extended_object.get_title }}
-                  </li>
-                {% endif %}
-              {# If the current page is the published version, show only the organizations that are published #}
-              {% elif organization.public_extension %}
-                <li class="course-detail__content__organizations__item">
-                  {{ organization.public_extension.extended_object.get_title }}
-                </li>
-              {% endif %}
+              {% include "courses/cms/_organization_list-item_snippet.html" %}
             {% endif %}
           {% endfor %}
         </ul>
@@ -145,4 +127,4 @@
   {% endwith %}
 
 </div>
-{% endblock content %}
+{% endspaceless %}{% endblock content %}
