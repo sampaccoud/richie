@@ -10,7 +10,8 @@ from django.utils import translation
 
 from cms import models as cms_models
 
-from richie.apps.courses.factories import OrganizationFactory, SubjectFactory
+from richie.apps.courses.factories import (CourseFactory, OrganizationFactory,
+                                           SubjectFactory)
 from richie.apps.courses.models import Course, Organization, Subject
 from richie.apps.persons.factories import PersonFactory
 from richie.apps.persons.models import Person
@@ -19,9 +20,12 @@ from ...helpers import create_i18n_page
 
 logger = logging.getLogger("richie.commands.core.create_demo_site")
 
+NB_COURSES = 3
+NB_COURSES_ORGANIZATION_RELATIONS = 3
+NB_COURSES_SUBJECT_RELATIONS = 4
 NB_ORGANIZATIONS = 8
-NB_SUBJECTS = 8
 NB_PERSONS = 10
+NB_SUBJECTS = 8
 PAGE_INFOS = {
     "home": {
         "content": {"en": "Home", "fr": "Accueil"},
@@ -111,18 +115,39 @@ def create_demo_site():
         )
         pages_created[name] = page
 
-    # Create organizations under the `organizations` page
-    OrganizationFactory.create_batch(
-        NB_ORGANIZATIONS, parent=pages_created["organizations"], with_content=True
+    # Create organizations under the `Organizations` page
+    organizations = OrganizationFactory.create_batch(
+        NB_ORGANIZATIONS,
+        parent=pages_created["organizations"],
+        with_content=True
     )
 
-    # Create subjects under the `subjects` page
-    SubjectFactory.create_batch(
+    # Create subjects under the `Subjects` page
+    subjects = SubjectFactory.create_batch(
         NB_SUBJECTS,
         parent=pages_created["subjects"],
         fill_banner=True,
         fill_description=True,
         fill_logo=True,
+    )
+
+    # Create courses under the `Course` page with subjects and organizations
+    # relations
+    courses = CourseFactory.create_batch(
+        NB_COURSES,
+        parent=pages_created["courses"],
+        fill_syllabus=True,
+        fill_format=True,
+        fill_prerequisites=True,
+        fill_plan=True,
+        fill_content_license=True,
+        fill_participation_license=True,
+        with_organizations=True,
+        with_organizations__items=organizations,
+        with_organizations__weight=NB_COURSES_ORGANIZATION_RELATIONS,
+        with_subjects=True,
+        with_subjects__items=subjects,
+        with_subjects__weight=NB_COURSES_SUBJECT_RELATIONS,
     )
 
     # Django parler require a language to be manually set when working out of
