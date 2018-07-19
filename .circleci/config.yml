@@ -1,4 +1,4 @@
-# Configuration file anchors
+# Configuration file anchor
 generate-version-file: &generate-version-file
   run:
     name: Create a version.json
